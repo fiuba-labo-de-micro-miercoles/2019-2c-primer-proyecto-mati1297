@@ -19,10 +19,21 @@ PROMEDIO:
 	LDI R18, 0 //inicializo en 0 el registro alto de la suma
 FOR:
 	LPM R19, Z+ //cargo de la memoria flash la primera direccion de la tabla
+	
+; preparás R0 = 0x00 por si es positivo o nulo el sumando
+	clr	r0
+	
 	CPI R19, 0 //comparo con 0 ya que LPM (o LD) no prende le flag N
-	BRMI SNEG //si es negativo hago branch
+	; también se puede usar TST R19
+
+	brsh	sumo_con_r0_la_parte_alta
+	com	r0
+;	BRMI SNEG //si es negativo hago branch
+	
+sumo_con_r0_la_parte_alta:
 	ADD R17, R19 //sumo el registro que entra a la suma
-	CLR R0 //limpio R0
+; en R0 ya tenés 0X00 o 0XFF según corresponda
+	; CLR R0 //limpio R0
 SEGUIR:
 	ADC R18, R0 //sumo R0 a R18 (registro alto) con el carry (R0 = 0 o R0 = FF)
 	DEC R16 //decremento R16
@@ -36,11 +47,12 @@ DIVISION:
 	BRNE DIVISION //si R16 != 0 sigue el ciclo
 	RET //salgo de la funcion
 
-SNEG:	
-	CLR R0 //limpio R0
-	COM R0 //lo complemento para R0 = FF ya que es negativo el numero
-	ADD R17, R19 //sumo el numero que ingresa
-	RJMP SEGUIR //vuelvo a la branch principal
+; esto no hace falta
+;SNEG:	
+;	CLR R0 //limpio R0
+;	COM R0 //lo complemento para R0 = FF ya que es negativo el numero
+;	ADD R17, R19 //sumo el numero que ingresa
+;	RJMP SEGUIR //vuelvo a la branch principal
 
 
 .ORG 0x760
