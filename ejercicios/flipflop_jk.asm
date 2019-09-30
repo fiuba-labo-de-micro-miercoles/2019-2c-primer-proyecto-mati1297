@@ -23,7 +23,7 @@ EXIT:
 .ENDM
 
 
-//definiciones para los shifts
+//definiciones (de los bits del puerto B) para los shifts
 .EQU K = 3
 .EQU J = 2
 .EQU CLK = 1
@@ -33,26 +33,28 @@ EXIT:
 .CSEG
 	RJMP MAIN
 
+.org	INT_VECTORS_SIZE	; Saltea los vectores de interrupción
 MAIN:	
-	IN R16, DDRB //traigo DDRB
+	IN R16, DDRB 	//traigo (leo) DDRB
 	ORI R16, (1<<Q) //inicializo como out Q
 	ANDI R16, ~((1<<K)|(1<<J)|(1<<CLK)) //inicializo como in K J y CLK
-	OUT DDRB, R16 //saco DDRB
+	OUT DDRB, R16 	//saco (escribo) DDRB
 
+; La detección del flanco de subida se puede hacer con sólo 4 instrucciones:
+EN_ALTO:
+	sbic	PINB, CLK
+	rjmp	EN_ALTO
+	
 DETECTAR_BAJO:
 	SBIS PINB, CLK //si el bit CLK del pin B esta en 1 saltea a la siguiente
-	RJMP DETECTAR_ALTO //si el bit esta bajo paso a detectar el alto
+;//	RJMP DETECTAR_ALTO //si el bit esta bajo paso a detectar el alto
 	RJMP DETECTAR_BAJO //si el bit esta alto todavia vuelvo a esperar el bajo
+;DETECTAR_ALTO:
+;	SBIC PINB, CLK //leo el bit CLK del PINB, salteo la siguiente si esta en 0
+;	RJMP JK //si el bit CLK esta alto paso al algoritmo del JK
+;	RJMP DETECTAR_ALTO //si todavia esta bajo vuelvo a esperar el alto
 
-DETECTAR_ALTO:
-	SBIC PINB, CLK //leo el bit CLK del PINB, salteo la siguiente si esta en 0
-	RJMP JK //si el bit CLK esta alto paso al algoritmo del JK
-	RJMP DETECTAR_ALTO //si todavia esta bajo vuelvo a esperar el alto
-
-
-
-
-JK:
+JK:	; si J=K=1 conmuta, si J=1 y K=0 setea, si J=0 y K=1 clear y si J=K=0 no hace nada
 	IN R20, PORTB //cargo el PORTB (salida) en el R20 para usarlo despues
 	IN R16, PINB //leo K
 	SHIFTR K, R16, R21 //shiteo 3 veces K
@@ -73,7 +75,9 @@ JK:
 	ANDI R16, (1<<Q) //limpio R16 despues del shifteo (no se si hace falta)
 	OR R20, R16 //agrego el valor de R16 a R20
 	OUT PORTB, R20 //saco R20 al PROTB
-	RJMP DETECTAR_BAJO //vuelvo a esperar el flanco bajo
+	
+	; RJMP DETECTAR_BAJO //vuelvo a esperar el flanco bajo
+	rjmp	EN_ALTO
 	
 	
 	//branch if zero is cleared
